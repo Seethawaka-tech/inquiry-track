@@ -373,6 +373,7 @@
     XLSX.writeFile(wb, `Seethawaka_Inquiries_${today.replace(/\//g, '-')}.xlsx`);
 }
 
+
   async function generatePDF(inquiries) {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF();
