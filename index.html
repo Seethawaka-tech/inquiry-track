@@ -308,14 +308,70 @@
 
   function exportToExcel() {
     const wb = XLSX.utils.book_new();
-    const ws_data = [["Customer", "Phone", "Staff", "Type", "Source", "Details", "Follow-up", "User"]];
+    const ws_data = [
+        ["Seethawaka Regency - Daily Inquiry Report"],
+        [`Date: ${today}`],
+        [],
+        ["Customer", "Phone", "Staff", "Type", "Source", "Details", "Follow-up", "Entered By"]
+    ];
+
     inquiries.forEach(i => {
-      ws_data.push([i.customer, i.phone, i.staff, i.type, i.source, i.details, i.follow, i.user]);
+        ws_data.push([i.customer, i.phone, i.staff, i.type, i.source, i.details, i.follow, i.user]);
     });
+
     const ws = XLSX.utils.aoa_to_sheet(ws_data);
+
+    // Style headers and data
+    const range = XLSX.utils.decode_range(ws['!ref']);
+    for (let R = range.s.r; R <= range.e.r; ++R) {
+        for (let C = range.s.c; C <= range.e.c; ++C) {
+            const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
+            if (!ws[cellAddress]) continue;
+
+            if (R === 3) {
+                ws[cellAddress].s = {
+                    font: { bold: true, color: { rgb: "FFFFFF" } },
+                    fill: { fgColor: { rgb: "0072FF" } },
+                    alignment: { horizontal: "center" },
+                    border: {
+                        top: { style: "thin", color: { rgb: "CCCCCC" } },
+                        bottom: { style: "thin", color: { rgb: "CCCCCC" } },
+                        left: { style: "thin", color: { rgb: "CCCCCC" } },
+                        right: { style: "thin", color: { rgb: "CCCCCC" } }
+                    }
+                };
+            } else if (R > 3) {
+                ws[cellAddress].s = {
+                    alignment: { horizontal: "center" },
+                    border: {
+                        top: { style: "thin", color: { rgb: "CCCCCC" } },
+                        bottom: { style: "thin", color: { rgb: "CCCCCC" } },
+                        left: { style: "thin", color: { rgb: "CCCCCC" } },
+                        right: { style: "thin", color: { rgb: "CCCCCC" } }
+                    }
+                };
+
+                // Apply zebra stripe
+                if ((R % 2) === 0) {
+                    ws[cellAddress].s.fill = { fgColor: { rgb: "F2F2F2" } };
+                }
+            }
+        }
+    }
+
+    // Auto width
+    const maxWidths = [];
+    ws_data.forEach(row => {
+        row.forEach((cell, idx) => {
+            const len = String(cell || "").length;
+            maxWidths[idx] = Math.max(maxWidths[idx] || 10, len + 5);
+        });
+    });
+    ws['!cols'] = maxWidths.map(w => ({ wch: w }));
+
     XLSX.utils.book_append_sheet(wb, ws, "Inquiries");
-    XLSX.writeFile(wb, `Inquiries_${today.replace(/\//g, '-')}.xlsx`);
-  }
+    XLSX.writeFile(wb, `Seethawaka_Inquiries_${today.replace(/\//g, '-')}.xlsx`);
+}
 
   async function generatePDF(inquiries) {
     const { jsPDF } = window.jspdf;
