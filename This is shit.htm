@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Seethawaka Regency - Daily Inquiry Tracker</title>
+
+    <!-- Animate.css -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
+
+    <!-- AOS Scroll Animations -->
+    <link rel="stylesheet" href="https://unpkg.com/aos@next/dist/aos.css" />
+
+    <!-- xlsx for Excel export -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+    <style>
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: linear-gradient(to right, #00c6ff, #0072ff);
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            max-width: 1100px;
+            margin: 50px auto;
+            padding: 25px;
+            background: #fff;
+            color: #333;
+            border-radius: 12px;
+            box-shadow: 0 0 12px rgba(0,0,0,0.2);
+        }
+
+        .branding {
+            text-align: center;
+            margin-bottom: 10px;
+        }
+
+        .branding img {
+            height: 70px;
+        }
+
+        h2 {
+            margin: 10px 0;
+            color: #0072ff;
+        }
+
+        #logoutBtn {
+            float: right;
+            margin: 10px 0;
+            padding: 8px 16px;
+            background-color: #ff4d4d;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+
+        .username {
+            text-align: center;
+            font-weight: bold;
+            color: #0072ff;
+            margin-bottom: 10px;
+        }
+
+        form, .filters {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        input, select, button {
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid #ccc;
+            font-size: 14px;
+        }
+
+        button[type="submit"], .filters button, #logoutBtn {
+            background-color: #0072ff;
+            color: white;
+            border: none;
+            transition: transform 0.3s ease, background-color 0.3s;
+        }
+
+        button:hover, #logoutBtn:hover {
+            background-color: #005acc;
+            transform: scale(1.05);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: #f9f9f9;
+            margin-top: 10px;
+        }
+
+        th, td {
+            padding: 10px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+
+        tr:nth-child(even) {
+            background-color: #f1f1f1;
+        }
+
+        @media print {
+            body * {
+                visibility: hidden;
+            }
+            #printTable, #printTable * {
+                visibility: visible;
+            }
+            #printTable {
+                position: absolute;
+                top: 0;
+                left: 0;
+                background: white;
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div id="login" class="animate__animated animate__fadeInDown">
+    <div class="container">
+        <div class="branding">
+            <img src="images.jpeg" class="animate__animated animate__zoomIn" alt="Seethawaka Regency Logo">
+            <h2>Seethawaka Regency - Daily Inquiry Tracker</h2>
+        </div>
+        <input id="username" type="text" placeholder="Username">
+        <input id="password" type="password" placeholder="Password">
+        <button onclick="checkLogin()">Login</button>
+        <p id="loginError" style="color:red;"></p>
+    </div>
+</div>
+
+<div id="main" style="display:none">
+    <div class="container">
+        <div class="branding">
+            <button id="logoutBtn" onclick="logout()">Logout</button>
+            <img src="images.jpeg" class="animate__animated animate__zoomIn" alt="Seethawaka Regency Logo">
+            <h2>Seethawaka Regency - Daily Inquiry Tracker</h2>
+        </div>
+        <h3 id="today"></h3>
+        <div class="username">Logged in as: <span id="userDisplay"></span></div>
+
+        <form id="inquiryForm">
+            <input type="text" id="customer" placeholder="Customer Name" required>
+            <input type="text" id="phone" placeholder="Phone Number" required>
+            <select id="type" required>
+                <option value="">Select Inquiry Type</option>
+                <option>Cake Order</option>
+                <option>Food Delivery</option>
+                <option>Honeymoon Package</option>
+                <option>Photo Location</option>
+                <option>Room</option>
+                <option>Restaurant Reservation</option>
+            </select>
+            <select id="source" required>
+                <option value="">Source</option>
+                <option>Call</option>
+                <option>WhatsApp</option>
+                <option>Walk-in</option>
+                <option>Email</option>
+            </select>
+            <input type="text" id="details" placeholder="Details">
+            <select id="follow" required>
+                <option value="">Follow-up</option>
+                <option>Won</option>
+                <option>Lost</option>
+                <option>Need to Follow Up</option>
+            </select>
+            <button type="submit">Add Inquiry</button>
+        </form>
+
+        <div class="filters">
+            <select id="filterFollow" onchange="renderTable()">
+                <option value="">All Inquiries</option>
+                <option>Won</option>
+                <option>Lost</option>
+                <option>Need to Follow Up</option>
+            </select>
+            <button onclick="printTable()">🖨️ Print</button>
+            <button onclick="exportToExcel()">📥 Export to Excel</button>
+        </div>
+
+        <table id="printTable" data-aos="fade-up">
+            <thead>
+                <tr>
+                    <th>Customer</th>
+                    <th>Phone</th>
+                    <th>Type</th>
+                    <th>Source</th>
+                    <th>Details</th>
+                    <th>Follow-up</th>
+                    <th>Entered By</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody id="inquiryList"></tbody>
+        </table>
+    </div>
+</div>
+
+<!-- AOS Script -->
+<script src="https://unpkg.com/aos@next/dist/aos.js"></script>
+<script>AOS.init({ duration: 800 });</script>
+
+<script>
+    const today = new Date().toLocaleDateString();
+    document.getElementById("today").textContent = `Date: ${today}`;
+
+    const allowedUsers = ["Dehemi", "Nithila", "Rashika", "Thakshila", "Eranga", "Chathuranga", "Ashvini"];
+    const password = "00000";
+    let loggedInUser = null;
+    let inquiries = JSON.parse(localStorage.getItem("inquiries") || "[]");
+    let lastSavedDate = localStorage.getItem("inquiryDate");
+
+    function checkLogin() {
+        const u = document.getElementById("username").value.trim();
+        const p = document.getElementById("password").value;
+        const matchedUser = allowedUsers.find(name => name.toLowerCase() === u.toLowerCase());
+
+        if (matchedUser && p === password) {
+            loggedInUser = matchedUser;
+            document.getElementById("login").style.display = "none";
+            document.getElementById("main").style.display = "block";
+            document.getElementById("userDisplay").textContent = matchedUser;
+            checkDateAndClear();
+            renderTable();
+        } else {
+            document.getElementById("loginError").innerText = "Invalid credentials!";
+        }
+    }
+
+    function logout() {
+        loggedInUser = null;
+        document.getElementById("main").style.display = "none";
+        document.getElementById("login").style.display = "block";
+        document.getElementById("username").value = "";
+        document.getElementById("password").value = "";
+    }
+
+    document.getElementById("inquiryForm").onsubmit = function (e) {
+        e.preventDefault();
+        const data = {
+            customer: customer.value,
+            phone: phone.value,
+            type: type.value,
+            source: source.value,
+            details: details.value,
+            follow: follow.value,
+            user: loggedInUser
+        };
+        inquiries.push(data);
+        localStorage.setItem("inquiries", JSON.stringify(inquiries));
+        localStorage.setItem("inquiryDate", new Date().toDateString());
+        this.reset();
+        renderTable();
+    };
+
+    function renderTable() {
+        const filter = document.getElementById("filterFollow").value;
+        const tbody = document.getElementById("inquiryList");
+        tbody.innerHTML = "";
+        inquiries.forEach((inq, i) => {
+            if (filter && inq.follow !== filter) return;
+            let row = tbody.insertRow();
+            row.innerHTML = `
+                <td>${inq.customer}</td>
+                <td>${inq.phone}</td>
+                <td>${inq.type}</td>
+                <td>${inq.source}</td>
+                <td>${inq.details}</td>
+                <td>${inq.follow}</td>
+                <td>${inq.user}</td>
+            `;
+            let actionCell = row.insertCell();
+            if (inq.user === loggedInUser) {
+                actionCell.innerHTML = `
+                    <button onclick="editInquiry(${i})">Edit</button>
+                    <button onclick="deleteInquiry(${i})">Delete</button>
+                `;
+            } else {
+                actionCell.innerHTML = `<i>No Access</i>`;
+            }
+        });
+    }
+
+    function deleteInquiry(i) {
+        if (confirm("Delete this inquiry?")) {
+            inquiries.splice(i, 1);
+            localStorage.setItem("inquiries", JSON.stringify(inquiries));
+            renderTable();
+        }
+    }
+
+    function editInquiry(i) {
+        let inq = inquiries[i];
+        customer.value = inq.customer;
+        phone.value = inq.phone;
+        type.value = inq.type;
+        source.value = inq.source;
+        details.value = inq.details;
+        follow.value = inq.follow;
+        deleteInquiry(i);
+    }
+
+    function printTable() {
+        window.print();
+    }
+
+    function exportToExcel() {
+        const wb = XLSX.utils.book_new();
+        const ws_data = [
+            ["Seethawaka Regency - Daily Inquiry Report"],
+            [`Date: ${today}`],
+            [],
+            ["Customer", "Phone", "Type", "Source", "Details", "Follow-up", "Entered By"]
+        ];
+
+        inquiries.forEach(i => {
+            ws_data.push([i.customer, i.phone, i.type, i.source, i.details, i.follow, i.user]);
+        });
+
+        const ws = XLSX.utils.aoa_to_sheet(ws_data);
+        XLSX.utils.book_append_sheet(wb, ws, "Daily Inquiries");
+        XLSX.writeFile(wb, `Seethawaka_Inquiries_${today.replace(/\//g, '-')}.xlsx`);
+    }
+
+    async function generatePDF(inquiries) {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+        doc.setFontSize(12);
+        doc.text("Seethawaka Regency - Daily Inquiry Summary", 10, 10);
+        let y = 20;
+        inquiries.forEach((inq, i) => {
+            doc.text(`${i + 1}. ${inq.customer} | ${inq.phone} | ${inq.type} | ${inq.follow} | By: ${inq.user}`, 10, y);
+            y += 10;
+            if (y > 270) {
+                doc.addPage();
+                y = 20;
+            }
+        });
+        doc.save(`Summary_${new Date().toDateString().replace(/ /g, '_')}.pdf`);
+    }
+
+    function checkDateAndClear() {
+        const currentDate = new Date().toDateString();
+        if (lastSavedDate && lastSavedDate !== currentDate && inquiries.length > 0) {
+            generatePDF(inquiries);
+            inquiries = [];
+            localStorage.removeItem("inquiries");
+        }
+        localStorage.setItem("inquiryDate", currentDate);
+    }
+</script>
+</body>
+</html>
