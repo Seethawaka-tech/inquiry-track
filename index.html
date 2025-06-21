@@ -142,7 +142,6 @@
     <form id="inquiryForm">
       <input type="text" id="customer" placeholder="Customer Name" required>
       <input type="text" id="phone" placeholder="Phone Number" required>
-      <input type="text" id="staff" placeholder="Staff Name" required>
       <select id="type" required>
         <option value="">Select Inquiry Type</option>
         <option>Cake Order</option>
@@ -185,7 +184,6 @@
         <tr>
           <th>Customer</th>
           <th>Phone</th>
-          <th>Staff</th>
           <th>Type</th>
           <th>Source</th>
           <th>Details</th>
@@ -239,7 +237,6 @@
     const data = {
       customer: customer.value,
       phone: phone.value,
-      staff: staff.value,
       type: type.value,
       source: source.value,
       details: details.value,
@@ -263,7 +260,6 @@
       row.innerHTML = `
         <td>${inq.customer}</td>
         <td>${inq.phone}</td>
-        <td>${inq.staff}</td>
         <td>${inq.type}</td>
         <td>${inq.source}</td>
         <td>${inq.details}</td>
@@ -294,7 +290,6 @@
     let inq = inquiries[i];
     customer.value = inq.customer;
     phone.value = inq.phone;
-    staff.value = inq.staff;
     type.value = inq.type;
     source.value = inq.source;
     details.value = inq.details;
@@ -307,67 +302,61 @@
   }
 
   function exportToExcel() {
-  const wb = XLSX.utils.book_new();
-  const ws_data = [
-    ["Seethawaka Regency - Daily Inquiry Report"],
-    [`Date: ${today}`],
-    [],
-    ["Customer", "Phone", "Staff", "Type", "Source", "Details", "Follow-up", "Entered By"]
-  ];
+    const wb = XLSX.utils.book_new();
+    const ws_data = [
+      ["Seethawaka Regency - Daily Inquiry Report"],
+      [`Date: ${today}`],
+      [],
+      ["Customer", "Phone", "Type", "Source", "Details", "Follow-up", "Entered By"]
+    ];
 
-  inquiries.forEach(i => {
-    ws_data.push([i.customer, i.phone, i.staff, i.type, i.source, i.details, i.follow, i.user]);
-  });
+    inquiries.forEach(i => {
+      ws_data.push([i.customer, i.phone, i.type, i.source, i.details, i.follow, i.user]);
+    });
 
-  const ws = XLSX.utils.aoa_to_sheet(ws_data);
+    const ws = XLSX.utils.aoa_to_sheet(ws_data);
+    const range = XLSX.utils.decode_range(ws['!ref']);
 
-  // Define styles
-  const range = XLSX.utils.decode_range(ws['!ref']);
-  for (let R = range.s.r; R <= range.e.r; ++R) {
-    for (let C = range.s.c; C <= range.e.c; ++C) {
-      const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
-      const cell = ws[cellAddress];
-      if (!cell) continue;
+    for (let R = range.s.r; R <= range.e.r; ++R) {
+      for (let C = range.s.c; C <= range.e.c; ++C) {
+        const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
+        const cell = ws[cellAddress];
+        if (!cell) continue;
 
-      cell.s = {
-        font: { name: "Calibri", sz: 12 },
-        alignment: { vertical: "center", horizontal: "center", wrapText: true },
-        border: {
-          top: { style: "thin", color: { rgb: "DDDDDD" } },
-          bottom: { style: "thin", color: { rgb: "DDDDDD" } },
-          left: { style: "thin", color: { rgb: "DDDDDD" } },
-          right: { style: "thin", color: { rgb: "DDDDDD" } }
-        }
-      };
+        cell.s = {
+          font: { name: "Calibri", sz: 12 },
+          alignment: { vertical: "center", horizontal: "center", wrapText: true },
+          border: {
+            top: { style: "thin", color: { rgb: "DDDDDD" } },
+            bottom: { style: "thin", color: { rgb: "DDDDDD" } },
+            left: { style: "thin", color: { rgb: "DDDDDD" } },
+            right: { style: "thin", color: { rgb: "DDDDDD" } }
+          }
+        };
 
-      if (R === 0) {
-        cell.s.font = { name: "Calibri", sz: 16, bold: true, color: { rgb: "333333" } };
-        cell.s.alignment.horizontal = "left";
-      } else if (R === 1) {
-        cell.s.font = { name: "Calibri", sz: 12, italic: true, color: { rgb: "666666" } };
-        cell.s.alignment.horizontal = "right";
-      } else if (R === 3) {
-        cell.s.fill = { fgColor: { rgb: "0072FF" } };
-        cell.s.font = { name: "Calibri", sz: 12, bold: true, color: { rgb: "FFFFFF" } };
-      } else if (R > 3) {
-        // Zebra striping
-        if ((R % 2) === 0) {
+        if (R === 0) {
+          cell.s.font = { name: "Calibri", sz: 16, bold: true, color: { rgb: "333333" } };
+          cell.s.alignment.horizontal = "left";
+        } else if (R === 1) {
+          cell.s.font = { name: "Calibri", sz: 12, italic: true, color: { rgb: "666666" } };
+          cell.s.alignment.horizontal = "right";
+        } else if (R === 3) {
+          cell.s.fill = { fgColor: { rgb: "0072FF" } };
+          cell.s.font = { name: "Calibri", sz: 12, bold: true, color: { rgb: "FFFFFF" } };
+        } else if (R > 3 && R % 2 === 0) {
           cell.s.fill = { fgColor: { rgb: "F2F2F2" } };
         }
       }
     }
+
+    const colWidths = ws_data[3].map((_, i) =>
+      ({ wch: Math.max(...ws_data.map(r => (r[i] ? r[i].toString().length : 0))) + 5 })
+    );
+    ws['!cols'] = colWidths;
+
+    XLSX.utils.book_append_sheet(wb, ws, "Daily Inquiries");
+    XLSX.writeFile(wb, `Seethawaka_Inquiries_${today.replace(/\//g, '-')}.xlsx`);
   }
-
-  // Auto column width
-  const colWidths = ws_data[3].map((_, i) =>
-    ({ wch: Math.max(...ws_data.map(r => (r[i] ? r[i].toString().length : 0))) + 5 })
-  );
-  ws['!cols'] = colWidths;
-
-  XLSX.utils.book_append_sheet(wb, ws, "Daily Inquiries");
-  XLSX.writeFile(wb, `Seethawaka_Inquiries_${today.replace(/\//g, '-')}.xlsx`);
-}
-
 
   async function generatePDF(inquiries) {
     const { jsPDF } = window.jspdf;
@@ -398,4 +387,3 @@
 </script>
 </body>
 </html>
-
