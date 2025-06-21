@@ -3,8 +3,17 @@
 <head>
   <meta charset="UTF-8">
   <title>Seethawaka Regency - Daily Inquiry Tracker</title>
+
+  <!-- Animate.css -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
+
+  <!-- AOS Scroll Animations -->
+  <link rel="stylesheet" href="https://unpkg.com/aos@next/dist/aos.css" />
+
+  <!-- xlsx for Excel export -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
   <style>
     body {
       font-family: 'Segoe UI', sans-serif;
@@ -69,15 +78,16 @@
       font-size: 14px;
     }
 
-    button[type="submit"], .filters button {
+    button[type="submit"], .filters button, #logoutBtn {
       background-color: #0072ff;
       color: white;
       border: none;
-      transition: 0.3s;
+      transition: transform 0.3s ease, background-color 0.3s;
     }
 
-    button:hover {
+    button:hover, #logoutBtn:hover {
       background-color: #005acc;
+      transform: scale(1.05);
     }
 
     table {
@@ -116,10 +126,10 @@
 </head>
 <body>
 
-<div id="login">
+<div id="login" class="animate__animated animate__fadeInDown">
   <div class="container">
     <div class="branding">
-      <img src="images.jpeg" alt="Seethawaka Regency Logo">
+      <img src="images.jpeg" class="animate__animated animate__zoomIn" alt="Seethawaka Regency Logo">
       <h2>Seethawaka Regency - Daily Inquiry Tracker</h2>
     </div>
     <input id="username" type="text" placeholder="Username">
@@ -133,7 +143,7 @@
   <div class="container">
     <div class="branding">
       <button id="logoutBtn" onclick="logout()">Logout</button>
-      <img src="images.jpeg" alt="Seethawaka Regency Logo">
+      <img src="images.jpeg" class="animate__animated animate__zoomIn" alt="Seethawaka Regency Logo">
       <h2>Seethawaka Regency - Daily Inquiry Tracker</h2>
     </div>
     <h3 id="today"></h3>
@@ -179,7 +189,7 @@
       <button onclick="exportToExcel()">📥 Export to Excel</button>
     </div>
 
-    <table id="printTable">
+    <table id="printTable" data-aos="fade-up">
       <thead>
         <tr>
           <th>Customer</th>
@@ -196,6 +206,10 @@
     </table>
   </div>
 </div>
+
+<!-- AOS Script -->
+<script src="https://unpkg.com/aos@next/dist/aos.js"></script>
+<script>AOS.init({ duration: 800 });</script>
 
 <script>
   const today = new Date().toLocaleDateString();
@@ -315,45 +329,6 @@
     });
 
     const ws = XLSX.utils.aoa_to_sheet(ws_data);
-    const range = XLSX.utils.decode_range(ws['!ref']);
-
-    for (let R = range.s.r; R <= range.e.r; ++R) {
-      for (let C = range.s.c; C <= range.e.c; ++C) {
-        const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
-        const cell = ws[cellAddress];
-        if (!cell) continue;
-
-        cell.s = {
-          font: { name: "Calibri", sz: 12 },
-          alignment: { vertical: "center", horizontal: "center", wrapText: true },
-          border: {
-            top: { style: "thin", color: { rgb: "DDDDDD" } },
-            bottom: { style: "thin", color: { rgb: "DDDDDD" } },
-            left: { style: "thin", color: { rgb: "DDDDDD" } },
-            right: { style: "thin", color: { rgb: "DDDDDD" } }
-          }
-        };
-
-        if (R === 0) {
-          cell.s.font = { name: "Calibri", sz: 16, bold: true, color: { rgb: "333333" } };
-          cell.s.alignment.horizontal = "left";
-        } else if (R === 1) {
-          cell.s.font = { name: "Calibri", sz: 12, italic: true, color: { rgb: "666666" } };
-          cell.s.alignment.horizontal = "right";
-        } else if (R === 3) {
-          cell.s.fill = { fgColor: { rgb: "0072FF" } };
-          cell.s.font = { name: "Calibri", sz: 12, bold: true, color: { rgb: "FFFFFF" } };
-        } else if (R > 3 && R % 2 === 0) {
-          cell.s.fill = { fgColor: { rgb: "F2F2F2" } };
-        }
-      }
-    }
-
-    const colWidths = ws_data[3].map((_, i) =>
-      ({ wch: Math.max(...ws_data.map(r => (r[i] ? r[i].toString().length : 0))) + 5 })
-    );
-    ws['!cols'] = colWidths;
-
     XLSX.utils.book_append_sheet(wb, ws, "Daily Inquiries");
     XLSX.writeFile(wb, `Seethawaka_Inquiries_${today.replace(/\//g, '-')}.xlsx`);
   }
